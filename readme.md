@@ -30,3 +30,38 @@ Se você encontrar bugs ou tiver sugestões de melhorias, sinta-se à vontade pa
 ## Licença
 
 Este projeto está licenciado sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+---
+
+# Flag Monitor Plugin
+
+## Description
+
+The **Flag Monitor Plugin** is a plugin for Adobe Lightroom that adds the functionality of flagging photo monitoring. Natively, Lightroom does not offer a way to automatically monitor when a photo is flagged and add a corresponding keyword. This plugin fills that gap, allowing users to keep their photos organized more efficiently.
+
+## Features
+
+- **Automatic Monitoring**: The plugin continuously monitors the selected photos in the Lightroom catalog.
+- **Keyword Addition**: When a photo is flagged, the plugin automatically adds the keyword "Flagged" to the photo.
+- **Background Execution**: Monitoring is done in the background without interrupting the user's workflow.
+
+## Installation
+
+1. Download the plugin and extract the files to a folder of your choice.
+2. In Lightroom, go to `File > Plugin Manager`.
+3. Click `Add` and navigate to the folder where you extracted the plugin files.
+4. Select the `Info.lua` file and click `Add Plugin`.
+
+## Usage
+
+1. After installation, go to `Library > Plugin Extras`.
+2. Select `Monitor Flagging` to start monitoring.
+3. The plugin will start monitoring the selected photos and automatically add the keyword "Flagged" when a photo is flagged.
+
+## Contribution
+
+If you find bugs or have suggestions for improvements, feel free to open an issue or submit a pull request.
+
+## License
+
+This project is licensed under the MIT license. See the `LICENSE` file for more details.
