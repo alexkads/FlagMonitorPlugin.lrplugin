@@ -15,6 +15,7 @@ local ExportFilter = {}
 function ExportFilter.sectionsForTopOfDialog(f, propertyTable)
     return {
         {
+            id = "AdicionarKeywordComprado",
             title = "Adicionar Keyword 'Comprado'",
             synopsis = "Marca fotos bandeiradas com a keyword 'comprado'",
             f:static_text {
