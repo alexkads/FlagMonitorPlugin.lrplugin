@@ -7,6 +7,7 @@ return {
     -- Aqui indicamos ao Lightroom que este plugin fornece um Export Filter
   LrExportFilterProvider = {
     {
+        id = "AdicionarKeywordComprado", -- Identificador único do filtro
         title = "Adicionar Keyword 'Comprado'",
         file = "KeywordExportFilter.lua",  -- Nome do arquivo que contém o filtro
     },
@@ -17,5 +18,5 @@ return {
         file = "PhotoObserver.lua",
     }
 },
-  VERSION = { major = 1, minor = 0, revision = 39 }
+  VERSION = { major = 1, minor = 0, revision = 40 }
 }
