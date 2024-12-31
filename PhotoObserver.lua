@@ -1,116 +1,92 @@
+-- PhotoObserver.lua
+
 local LrApplication = import 'LrApplication'
 local LrTasks       = import 'LrTasks'
-local LrLogger = import 'LrLogger' -- Added logger import
-local logger = LrLogger("PhotoObserver") -- Initialized logger
-logger:enable("print") -- Enabled logging
+local LrLogger      = import 'LrLogger'
 
--- Adiciona a keyword "Bandeirada" se ela não existir
-local function addFlagKeyword(photo)
-    logger:info("addFlagKeyword called for photo: " .. photo:getPath()) -- Added log
+-- Inicializa o logger
+local logger = LrLogger("PhotoObserver")
+logger:enable("print")  -- Exibe logs no console do Lightroom (Janela > Mostrar Log do Plugin)
+
+-------------------------------------------------------------------------------
+-- Função auxiliar para adicionar/remover keywords
+-------------------------------------------------------------------------------
+local function ensureKeyword(photo, keywordName, shouldHaveKeyword)
+    logger:info(
+        string.format(
+            "ensureKeyword chamado para '%s'; Foto: %s",
+            keywordName,
+            photo:getPath() or "Caminho desconhecido"
+        )
+    )
+
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Add Bandeirada Keyword", function()
-        local keywords = photo:getRawMetadata("keywordTags")
-        local alreadyTagged = false
 
+    catalog:withWriteAccessDo("Ensure " .. keywordName .. " Keyword", function()
+        local keywords = photo:getRawMetadata("keywordTags")
+        local foundKeyword = nil
+
+        -- Verifica se a keyword já existe
         for _, kw in ipairs(keywords) do
-            if kw:getName() == "Bandeirada" then
-                alreadyTagged = true
-                logger:debug("'Bandeirada' keyword already exists.") -- Added log
+            if kw:getName() == keywordName then
+                foundKeyword = kw
                 break
             end
         end
 
-        if not alreadyTagged then
-            logger:info("Adding 'Bandeirada' keyword.") -- Added log
-            local bandeiradaKeyword = catalog:createKeyword("Bandeirada", {}, true, nil, true)
-            photo:addKeyword(bandeiradaKeyword)
-        end
-    end)
-end
-
--- Adiciona a keyword "Rejeitada" se ela não existir
-local function addRejectedKeyword(photo)
-    logger:info("addRejectedKeyword called for photo: " .. photo:getPath()) -- Added log
-    local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Add Rejeitada Keyword", function()
-        local keywords = photo:getRawMetadata("keywordTags")
-        local alreadyTagged = false
-
-        for _, kw in ipairs(keywords) do
-            if kw:getName() == "Rejeitada" then
-                alreadyTagged = true
-                logger:debug("'Rejeitada' keyword already exists.") -- Added log
-                break
+        if shouldHaveKeyword then
+            -- Se devemos ter a keyword mas ela não foi encontrada, cria e adiciona
+            if not foundKeyword then
+                logger:info("Adicionando keyword '" .. keywordName .. "'.")
+                local newKeyword = catalog:createKeyword(keywordName, {}, true, nil, true)
+                photo:addKeyword(newKeyword)
+            else
+                logger:debug("Keyword '" .. keywordName .. "' já existe.")
             end
-        end
-
-        if not alreadyTagged then
-            logger:info("Adding 'Rejeitada' keyword.") -- Added log
-            local rejeitadaKeyword = catalog:createKeyword("Rejeitada", {}, true, nil, true)
-            photo:addKeyword(rejeitadaKeyword)
-        end
-    end)
-end
-
--- Remove a keyword "Bandeirada"
-local function removeFlagKeyword(photo)
-    logger:info("removeFlagKeyword called for photo: " .. photo:getPath()) -- Added log
-    local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Remove Bandeirada Keyword", function()
-        local keywords = photo:getRawMetadata("keywordTags")
-        for _, kw in ipairs(keywords) do
-            if kw:getName() == "Bandeirada" then
-                logger:info("Removing 'Bandeirada' keyword.") -- Added log
-                photo:removeKeyword(kw)
-                break
+        else
+            -- Se NÃO devemos ter a keyword mas ela existe, remove
+            if foundKeyword then
+                logger:info("Removendo keyword '" .. keywordName .. "'.")
+                photo:removeKeyword(foundKeyword)
             end
         end
     end)
 end
 
--- Remove a keyword "Rejeitada"
-local function removeRejectedKeyword(photo)
-    logger:info("removeRejectedKeyword called for photo: " .. photo:getPath()) -- Added log
-    local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Remove Rejeitada Keyword", function()
-        local keywords = photo:getRawMetadata("keywordTags")
-        for _, kw in ipairs(keywords) do
-            if kw:getName() == "Rejeitada" then
-                logger:info("Removing 'Rejeitada' keyword.") -- Added log
-                photo:removeKeyword(kw)
-                break
-            end
-        end
-    end)
-end
-
--- Função que monitora mudanças no status da bandeira
+-------------------------------------------------------------------------------
+-- Função que monitora mudanças no status de bandeira (flagStatus)
+-------------------------------------------------------------------------------
 local function monitorFlagging()
-    logger:info("monitorFlagging started.") -- Added log
+    logger:info("monitorFlagging iniciou.")
     local catalog = LrApplication.activeCatalog()
 
+    -- Adiciona um observador ao catálogo para monitorar "flagStatus" de cada foto
     catalog:addPhotoPropertyChangeObserver("flagStatus", function(photo, propertyName)
         if propertyName == "flagStatus" then
-            local flagState = photo:getFlagState() -- Valores: "flagged", "unflagged", "rejected"
-            logger:debug("Flag state changed to: " .. flagState) -- Added log
+            local flagState = photo:getFlagState() -- "flagged", "unflagged" ou "rejected"
+            logger:debug("Flag state mudou para: " .. tostring(flagState))
 
             if flagState == "flagged" then
-                addFlagKeyword(photo)
-                removeRejectedKeyword(photo) -- Garante que "Rejeitada" seja removida
+                -- Foto sinalizada
+                ensureKeyword(photo, "Bandeirada", true)
+                ensureKeyword(photo, "Rejeitada", false)
             elseif flagState == "rejected" then
-                addRejectedKeyword(photo)
-                removeFlagKeyword(photo) -- Garante que "Bandeirada" seja removida
+                -- Foto rejeitada
+                ensureKeyword(photo, "Bandeirada", false)
+                ensureKeyword(photo, "Rejeitada", true)
             else
-                -- Caso não esteja flagged ou rejected, remove ambas as keywords
-                removeFlagKeyword(photo)
-                removeRejectedKeyword(photo)
+                -- Foto sem sinalização
+                ensureKeyword(photo, "Bandeirada", false)
+                ensureKeyword(photo, "Rejeitada", false)
             end
         end
     end)
 end
 
--- Inicia o monitoramento em uma tarefa assíncrona
+-------------------------------------------------------------------------------
+-- Inicia a tarefa assíncrona para executar o monitoramento
+-------------------------------------------------------------------------------
 LrTasks.startAsyncTask(function()
-    logger:info("Starting async task for monitorFlagging.") -- Added log
+    logger:info("Iniciando task assíncrona para monitorFlagging.")
     monitorFlagging()
 end)
