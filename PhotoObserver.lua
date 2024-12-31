@@ -12,17 +12,17 @@ logger:enable("print")  -- Exibe logs no console do Lightroom (Janela > Mostrar 
 -- Função auxiliar para adicionar/remover keywords
 -------------------------------------------------------------------------------
 local function ensureKeyword(photo, keywordName, shouldHaveKeyword)
-    logger:info(
-        string.format(
-            "ensureKeyword chamado para '%s'; Foto: %s",
-            keywordName,
-            photo:getPath() or "Caminho desconhecido"
-        )
-    )
+    logger:info("Iniciando ensureKeyword para '" .. keywordName .. "'; Foto: " .. (photo:getPath() or "Caminho desconhecido"))
 
     local catalog = LrApplication.activeCatalog()
 
+    if not catalog then
+        logger:error("Catálogo ativo não encontrado.")
+        return
+    end
+
     catalog:withWriteAccessDo("Ensure " .. keywordName .. " Keyword", function()
+        logger:info("Dentro de withWriteAccessDo para '" .. keywordName .. "'")
         local keywords = photo:getRawMetadata("keywordTags")
         local foundKeyword = nil
 
@@ -51,19 +51,39 @@ local function ensureKeyword(photo, keywordName, shouldHaveKeyword)
             end
         end
     end)
+
+    logger:info("Finalizando ensureKeyword para '" .. keywordName .. "'")
 end
 
 -------------------------------------------------------------------------------
 -- Função que monitora mudanças no status de bandeira (flagStatus)
 -------------------------------------------------------------------------------
 local function monitorFlagging()
-    logger:info("monitorFlagging iniciou.")
+    logger:info("Iniciando monitorFlagging.")
     local catalog = LrApplication.activeCatalog()
 
+    if not catalog then
+        logger:error("Catálogo ativo não encontrado.")
+        return
+    end
+
     -- Adiciona um observador ao catálogo para monitorar "flagStatus" de cada foto
-    catalog:addPhotoPropertyChangeObserver("flagStatus", function(photo, propertyName)
+    catalog:addObserver("flagStatus", function(eventContext)
+        logger:info("Observador de flagStatus acionado.")
+        local photo = eventContext.photo
+        local propertyName = eventContext.propertyName
+
+        if not photo then
+            logger:error("Foto não encontrada no contexto do evento.")
+            return
+        end
+
         if propertyName == "flagStatus" then
             local flagState = photo:getFlagState() -- "flagged", "unflagged" ou "rejected"
+            if not flagState then
+                logger:warn("Flag state é nil para a foto: " .. (photo:getPath() or "Caminho desconhecido"))
+                return
+            end
             logger:debug("Flag state mudou para: " .. tostring(flagState))
 
             if flagState == "flagged" then
@@ -81,6 +101,8 @@ local function monitorFlagging()
             end
         end
     end)
+
+    logger:info("Finalizando monitorFlagging.")
 end
 
 -------------------------------------------------------------------------------
