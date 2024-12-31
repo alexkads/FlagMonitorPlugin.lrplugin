@@ -1,6 +1,6 @@
 return {
-  LrSdkMinimumVersion = 14.0, -- minimum SDK version required by this plug-in
-  LrSdkVersion = 14.0,
+  LrSdkMinimumVersion = 11.0, -- minimum SDK version required by this plug-in
+  LrSdkVersion = 11.0,
   LrToolkitIdentifier = 'com.alexkads.flagmonitor',
   LrPluginName = "Flag Monitor Plugin",
   LrForceInitPlugin = true,

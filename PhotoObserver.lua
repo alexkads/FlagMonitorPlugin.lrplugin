@@ -3,6 +3,7 @@
 local LrApplication = import 'LrApplication'
 local LrTasks       = import 'LrTasks'
 local LrLogger      = import 'LrLogger'
+local LrCatalog     = import 'LrCatalog'
 
 -- Inicializa o logger
 local logger = LrLogger("PhotoObserver")
@@ -79,18 +80,18 @@ local function monitorFlagging()
         end
 
         if propertyName == "flagStatus" then
-            local flagState = photo:getFlagState() -- "flagged", "unflagged" ou "rejected"
-            if not flagState then
+            local flagState = photo:getFlagState() -- 1 (flagged), 0 (unflagged) ou -1 (rejected)
+            if flagState == nil then
                 logger:warn("Flag state é nil para a foto: " .. (photo:getPath() or "Caminho desconhecido"))
                 return
             end
             logger:debug("Flag state mudou para: " .. tostring(flagState))
 
-            if flagState == "flagged" then
+            if flagState == 1 then
                 -- Foto sinalizada
                 ensureKeyword(photo, "Bandeirada", true)
                 ensureKeyword(photo, "Rejeitada", false)
-            elseif flagState == "rejected" then
+            elseif flagState == -1 then
                 -- Foto rejeitada
                 ensureKeyword(photo, "Bandeirada", false)
                 ensureKeyword(photo, "Rejeitada", true)
