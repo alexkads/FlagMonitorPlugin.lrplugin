@@ -1,64 +1,64 @@
 local LrApplication = import "LrApplication"
 local LrTasks = import "LrTasks"
-local LrDialogs = import "LrDialogs"
-local LrLogger = import "LrLogger"
 
--- Configurar Logger
-local logger = LrLogger("FlagMonitorLogger")
-logger:enable("logfile") -- Salva em arquivo de log
-logger:enable("print")   -- Exibe no console (terminal)
-
-local function showDialog(message)
-    LrDialogs.message("Flag Monitor", message, "info")
-end
-
--- Função para adicionar palavra-chave
+-- Função para adicionar a palavra-chave "Bandeirada"
 local function addFlagKeyword(photo)
     local catalog = LrApplication.activeCatalog()
     catalog:withWriteAccessDo("Adicionar Palavra-Chave", function()
         local keywords = photo:getRawMetadata("keywordTags")
         local alreadyTagged = false
-        
-        -- Verificar se a palavra-chave já existe
+
+        -- Verificar se a palavra-chave "Bandeirada" já existe
         for _, keyword in ipairs(keywords) do
             if keyword:getName() == "Bandeirada" then
                 alreadyTagged = true
                 break
             end
         end
-        
-        -- Se não existe, adicionar a palavra-chave
+
+        -- Se não existe, criar e adicionar a palavra-chave
         if not alreadyTagged then
             local keyword = catalog:createKeyword("Bandeirada", {}, true, nil, true)
             photo:addKeyword(keyword)
-            logger:info("Palavra-chave 'Bandeirada' adicionada à foto.")
-            showDialog("Palavra-chave 'Bandeirada' adicionada à foto.")
-        else
-            logger:info("Palavra-chave 'Bandeirada' já existe.")
-            showDialog("Palavra-chave 'Bandeirada' já está presente.")
+        end
+    end)
+end
+
+-- Função para remover a palavra-chave "Bandeirada"
+local function removeFlagKeyword(photo)
+    local catalog = LrApplication.activeCatalog()
+    catalog:withWriteAccessDo("Remover Palavra-Chave", function()
+        local keywords = photo:getRawMetadata("keywordTags")
+
+        for _, keyword in ipairs(keywords) do
+            if keyword:getName() == "Bandeirada" then
+                photo:removeKeyword(keyword)
+                break
+            end
         end
     end)
 end
 
 -- Função principal de monitoramento
 local function monitorFlagging()
-    showDialog("Inicializando addFlagKeyword...")
-    logger:info("Monitoramento de bandeiramento iniciado.")
     local catalog = LrApplication.activeCatalog()
-    
-    -- Observador de mudanças nas fotos
-    catalog:addPhotoPropertyChangeObserver("flagged", function(eventContext, photo)
-        local flagStatus = photo:getRawMetadata("flagged")
-        logger:info("Mudança detectada na foto: " .. photo:getFormattedMetadata("fileName"))
-        logger:info("Status de bandeiramento: " .. tostring(flagStatus))
 
+    -- Observador de mudanças na propriedade "flagged" das fotos
+    catalog:addPhotoPropertyChangeObserver("flagged", function(photo, changedProperty)
+        -- Verifica se a propriedade alterada foi mesmo "flagged"
+        if changedProperty ~= "flagged" then
+            return
+        end
+
+        -- Retorna true se a foto está bandeirada, false caso contrário
+        local flagStatus = photo:getRawMetadata("flagged")
 
         if flagStatus then
             addFlagKeyword(photo)
+        else
+            removeFlagKeyword(photo)
         end
     end)
-    
-    logger:info("Monitoramento de bandeiramento iniciado.")
 end
 
 -- Iniciar Monitoramento

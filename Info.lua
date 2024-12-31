@@ -8,5 +8,5 @@ return {
           file = "Plugin.lua",
       }
   },
-  VERSION = { major = 1, minor = 0, revision = 7 }
+  VERSION = { major = 1, minor = 0, revision = 9 }
 }
