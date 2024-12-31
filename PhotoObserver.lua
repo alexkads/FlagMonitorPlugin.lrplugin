@@ -130,8 +130,10 @@ local function checkFlagAndAddKeyword()
 
       if flag == 1 then
         addKeywordToPhoto(photo, KEYWORD_TO_ADD)
+        photo:setRawMetadata("colorLabel", 3) -- Set label green
       else
         removeKeywordFromPhoto(photo, KEYWORD_TO_ADD)
+        photo:setRawMetadata("colorLabel", 0) -- Remove label
       end
     end
   end)
