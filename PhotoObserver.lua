@@ -1,42 +1,31 @@
-local LrTasks = import "LrTasks"
-local LrLogger = import "LrLogger"
-local LrApplication = import "LrApplication"
+local LrTasks        = import "LrTasks"
+local LrLogger       = import "LrLogger"
+local LrApplication  = import "LrApplication"
+
 local catalog = LrApplication.activeCatalog()
 
--- Cria um logger para debug (opcional)
 local logger = LrLogger("PhotoObserver")
 logger:enable("logfile")
 
--- Nome da palavra-chave que queremos atribuir
-local KEYWORD_TO_ADD = "Bandeirada"
+local KEYWORD_TO_ADD = "Comprada"
 
--- Função principal que fará a verificação
-local function checkFlagAndAddKeyword()
-  catalog:withWriteAccessDo("Check Flag", function()
-    -- Pega as fotos que estão selecionadas (por exemplo)
-    local selectedPhotos = catalog:getTargetPhotos()
-    for _, photo in ipairs(selectedPhotos) do
-      -- Lê o status de bandeira da foto
-      local flag = photo:getRawMetadata("pickStatus")
-      -- Valores possíveis: 
-      --   0 = sem bandeira, 
-      --   1 = bandeirada (Pick), 
-      --  -1 = rejeitada (Reject)
-
-      if flag == 1 then
-        -- Se for bandeirada, adiciona a palavra-chave
-        addKeywordToPhoto(photo, KEYWORD_TO_ADD)
-      end
+-- Função para remover a palavra-chave
+function removeKeywordFromPhoto(photo, keywordName)
+  local currentKeywords = photo:getRawMetadata("keywords")
+  for _, kw in ipairs(currentKeywords) do
+    if kw:getName() == keywordName then
+      photo:removeKeyword(kw)
+      logger:trace("Palavra-chave '" .. keywordName .. "' removida da foto.")
+      break
     end
-  end)
+  end
 end
 
--- Função auxiliar para adicionar a palavra-chave
+-- Função para adicionar a palavra-chave
 function addKeywordToPhoto(photo, keywordName)
   local keyword = findOrCreateKeyword(keywordName)
   if keyword then
     local currentKeywords = photo:getRawMetadata("keywords")
-    -- Verifica se já existe para evitar duplicar
     local alreadyHasKeyword = false
     for _, kw in ipairs(currentKeywords) do
       if kw:getName() == keywordName then
@@ -47,7 +36,7 @@ function addKeywordToPhoto(photo, keywordName)
 
     if not alreadyHasKeyword then
       photo:addKeyword(keyword)
-      logger:trace("Palavra-chave '"..keywordName.."' adicionada à foto.")
+      logger:trace("Palavra-chave '" .. keywordName .. "' adicionada à foto.")
     end
   end
 end
@@ -61,15 +50,28 @@ function findOrCreateKeyword(keywordName)
   return keyword
 end
 
--- Rotina que o Lightroom chamará quando o plugin iniciar
+-- Função principal que fará a checagem de bandeira
+local function checkFlagAndAddKeyword()
+  catalog:withWriteAccessDo("Check Flag", function()
+    local selectedPhotos = catalog:getTargetPhotos()
+    for _, photo in ipairs(selectedPhotos) do
+      local flag = photo:getRawMetadata("pickStatus")
+      -- 0 = sem bandeira, 1 = bandeirada (Pick), -1 = rejeitada (Reject)
+      if flag == 1 then
+        addKeywordToPhoto(photo, KEYWORD_TO_ADD)
+      else
+        removeKeywordFromPhoto(photo, KEYWORD_TO_ADD)
+      end
+    end
+  end)
+end
+
+-- Rotina chamada quando o plugin inicia
 local function startMonitoring()
   LrTasks.startAsyncTask(function()
-    -- Nesse loop simples, executamos a checagem a cada X segundos.
-    -- Em produção, pode ser otimizável para só disparar manualmente
-    -- ou conforme a lógica que você preferir.
     while true do
       checkFlagAndAddKeyword()
-      LrTasks.sleep(5) -- verifica a cada 5 segundos (exemplo)
+      LrTasks.sleep(5)
     end
   end)
 end
