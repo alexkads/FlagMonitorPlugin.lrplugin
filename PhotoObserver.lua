@@ -6,6 +6,7 @@ local catalog = LrApplication.activeCatalog()
 
 local logger = LrLogger("PhotoObserver")
 logger:enable("logfile")
+logger:enable("print")
 
 local KEYWORD_TO_ADD = "Comprada"
 
@@ -68,6 +69,7 @@ end
 
 -- Rotina chamada quando o plugin inicia
 local function startMonitoring()
+  logger:trace("Plugin carregado corretamente.")
   LrTasks.startAsyncTask(function()
     while true do
       checkFlagAndAddKeyword()
