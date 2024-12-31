@@ -18,5 +18,5 @@ return {
         file = "PhotoObserver.lua",
     }
 },
-  VERSION = { major = 1, minor = 0, revision = 40 }
+  VERSION = { major = 1, minor = 1, revision = 0, build = 1, },
 }
