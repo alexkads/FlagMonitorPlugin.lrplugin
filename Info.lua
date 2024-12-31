@@ -2,7 +2,7 @@ return {
   LrSdkVersion = 10.0,
   LrToolkitIdentifier = 'com.alexkads.flagmonitor',
   LrPluginName = "Flag Monitor Plugin",
-  LrForceInitPlugin = true,
+  --LrForceInitPlugin = true,
   LrInitPlugin = 'Init.lua',
     -- Aqui indicamos ao Lightroom que este plugin fornece um Export Filter
   LrExportFilterProvider = {
@@ -18,5 +18,5 @@ return {
         file = "PhotoObserver.lua",
     }
 },
-  VERSION = { major = 1, minor = 0, revision = 36 }
+  VERSION = { major = 1, minor = 0, revision = 37 }
 }
