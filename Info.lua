@@ -2,11 +2,6 @@ return {
   LrSdkVersion = 12.0, -- Versão do SDK
   LrToolkitIdentifier = 'com.alexkads.flagmonitor',
   LrPluginName = "Flag Monitor Plugin",
-  LrLibraryMenuItems = {
-      {
-          title = "Monitorar Bandeiramento",
-          file = "Plugin.lua",
-      }
-  },
-  VERSION = { major = 1, minor = 0, revision = 10 }
+  LrInitPlugin = 'PhotoObserver.lua',
+  VERSION = { major = 1, minor = 0, revision = 12 }
 }
