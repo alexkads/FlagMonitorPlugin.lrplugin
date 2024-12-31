@@ -1,115 +1,79 @@
--- PhotoObserver.lua
+local LrTasks = import "LrTasks"
+local LrLogger = import "LrLogger"
+local LrApplication = import "LrApplication"
+local catalog = LrApplication.activeCatalog()
 
-local LrApplication = import 'LrApplication'
-local LrTasks       = import 'LrTasks'
-local LrLogger      = import 'LrLogger'
-local LrCatalog     = import 'LrCatalog'
-
--- Inicializa o logger
+-- Cria um logger para debug (opcional)
 local logger = LrLogger("PhotoObserver")
-logger:enable("print")  -- Exibe logs no console do Lightroom (Janela > Mostrar Log do Plugin)
+logger:enable("logfile")
 
--------------------------------------------------------------------------------
--- Função auxiliar para adicionar/remover keywords
--------------------------------------------------------------------------------
-local function ensureKeyword(photo, keywordName, shouldHaveKeyword)
-    logger:info("Iniciando ensureKeyword para '" .. keywordName .. "'; Foto: " .. (photo:getPath() or "Caminho desconhecido"))
+-- Nome da palavra-chave que queremos atribuir
+local KEYWORD_TO_ADD = "Bandeirada"
 
-    local catalog = LrApplication.activeCatalog()
+-- Função principal que fará a verificação
+local function checkFlagAndAddKeyword()
+  catalog:withWriteAccessDo("Check Flag", function()
+    -- Pega as fotos que estão selecionadas (por exemplo)
+    local selectedPhotos = catalog:getTargetPhotos()
+    for _, photo in ipairs(selectedPhotos) do
+      -- Lê o status de bandeira da foto
+      local flag = photo:getRawMetadata("pickStatus")
+      -- Valores possíveis: 
+      --   0 = sem bandeira, 
+      --   1 = bandeirada (Pick), 
+      --  -1 = rejeitada (Reject)
 
-    if not catalog then
-        logger:error("Catálogo ativo não encontrado.")
-        return
+      if flag == 1 then
+        -- Se for bandeirada, adiciona a palavra-chave
+        addKeywordToPhoto(photo, KEYWORD_TO_ADD)
+      end
     end
-
-    catalog:withWriteAccessDo("Ensure " .. keywordName .. " Keyword", function()
-        logger:info("Dentro de withWriteAccessDo para '" .. keywordName .. "'")
-        local keywords = photo:getRawMetadata("keywordTags")
-        local foundKeyword = nil
-
-        -- Verifica se a keyword já existe
-        for _, kw in ipairs(keywords) do
-            if kw:getName() == keywordName then
-                foundKeyword = kw
-                break
-            end
-        end
-
-        if shouldHaveKeyword then
-            -- Se devemos ter a keyword mas ela não foi encontrada, cria e adiciona
-            if not foundKeyword then
-                logger:info("Adicionando keyword '" .. keywordName .. "'.")
-                local newKeyword = catalog:createKeyword(keywordName, {}, true, nil, true)
-                photo:addKeyword(newKeyword)
-            else
-                logger:debug("Keyword '" .. keywordName .. "' já existe.")
-            end
-        else
-            -- Se NÃO devemos ter a keyword mas ela existe, remove
-            if foundKeyword then
-                logger:info("Removendo keyword '" .. keywordName .. "'.")
-                photo:removeKeyword(foundKeyword)
-            end
-        end
-    end)
-
-    logger:info("Finalizando ensureKeyword para '" .. keywordName .. "'")
+  end)
 end
 
--------------------------------------------------------------------------------
--- Função que monitora mudanças no status de bandeira (flagStatus)
--------------------------------------------------------------------------------
-local function monitorFlagging()
-    logger:info("Iniciando monitorFlagging.")
-    local catalog = LrApplication.activeCatalog()
-
-    if not catalog then
-        logger:error("Catálogo ativo não encontrado.")
-        return
+-- Função auxiliar para adicionar a palavra-chave
+function addKeywordToPhoto(photo, keywordName)
+  local keyword = findOrCreateKeyword(keywordName)
+  if keyword then
+    local currentKeywords = photo:getRawMetadata("keywords")
+    -- Verifica se já existe para evitar duplicar
+    local alreadyHasKeyword = false
+    for _, kw in ipairs(currentKeywords) do
+      if kw:getName() == keywordName then
+        alreadyHasKeyword = true
+        break
+      end
     end
 
-    -- Adiciona um observador ao catálogo para monitorar "flagStatus" de cada foto
-    catalog:addObserver("flagStatus", function(eventContext)
-        logger:info("Observador de flagStatus acionado.")
-        local photo = eventContext.photo
-        local propertyName = eventContext.propertyName
-
-        if not photo then
-            logger:error("Foto não encontrada no contexto do evento.")
-            return
-        end
-
-        if propertyName == "flagStatus" then
-            local flagState = photo:getFlagState() -- 1 (flagged), 0 (unflagged) ou -1 (rejected)
-            if flagState == nil then
-                logger:warn("Flag state é nil para a foto: " .. (photo:getPath() or "Caminho desconhecido"))
-                return
-            end
-            logger:debug("Flag state mudou para: " .. tostring(flagState))
-
-            if flagState == 1 then
-                -- Foto sinalizada
-                ensureKeyword(photo, "Bandeirada", true)
-                ensureKeyword(photo, "Rejeitada", false)
-            elseif flagState == -1 then
-                -- Foto rejeitada
-                ensureKeyword(photo, "Bandeirada", false)
-                ensureKeyword(photo, "Rejeitada", true)
-            else
-                -- Foto sem sinalização
-                ensureKeyword(photo, "Bandeirada", false)
-                ensureKeyword(photo, "Rejeitada", false)
-            end
-        end
-    end)
-
-    logger:info("Finalizando monitorFlagging.")
+    if not alreadyHasKeyword then
+      photo:addKeyword(keyword)
+      logger:trace("Palavra-chave '"..keywordName.."' adicionada à foto.")
+    end
+  end
 end
 
--------------------------------------------------------------------------------
--- Inicia a tarefa assíncrona para executar o monitoramento
--------------------------------------------------------------------------------
-LrTasks.startAsyncTask(function()
-    logger:info("Iniciando task assíncrona para monitorFlagging.")
-    monitorFlagging()
-end)
+-- Função para encontrar ou criar uma palavra-chave
+function findOrCreateKeyword(keywordName)
+  local keyword = catalog:findKeywordByName(keywordName)
+  if not keyword then
+    keyword = catalog:createKeyword(keywordName, {}, true, nil, true)
+  end
+  return keyword
+end
+
+-- Rotina que o Lightroom chamará quando o plugin iniciar
+local function startMonitoring()
+  LrTasks.startAsyncTask(function()
+    -- Nesse loop simples, executamos a checagem a cada X segundos.
+    -- Em produção, pode ser otimizável para só disparar manualmente
+    -- ou conforme a lógica que você preferir.
+    while true do
+      checkFlagAndAddKeyword()
+      LrTasks.sleep(5) -- verifica a cada 5 segundos (exemplo)
+    end
+  end)
+end
+
+return {
+  startMonitoring = startMonitoring
+}
