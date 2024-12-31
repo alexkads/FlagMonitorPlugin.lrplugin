@@ -27,9 +27,9 @@ end
 --------------------------------------------------------------------------------
 -- 2. Lógica principal de adicionar a keyword
 --------------------------------------------------------------------------------
-function ExportFilter.postProcessRenderedPhotos(functionContext, filterContext)
+function ExportFilter.postProcessRenderedPhotos(functionContext, exportContext)
     -- Obtém as fotos que estão no batch de exportação
-    local exportSession = filterContext.exportSession
+    local exportSession = exportContext.exportSession
     local photosToExport = exportSession:photosToExport()
 
     -- Obtém referência ao catálogo atual (para poder escrever metadados)
