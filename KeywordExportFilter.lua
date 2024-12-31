@@ -50,7 +50,8 @@ function ExportFilter.postProcessRenderedPhotos(functionContext, filterContext)
         --    1 => bandeirada
         --    0 => sem bandeira
         --   -1 => rejeitada
-        local flagStatus = photo:getFlag()
+        --local flagStatus = photo:getFlag()
+        local flagStatus = photo:getRawMetadata("pickStatus")
         if flagStatus == 1 then
             -- Precisamos de acesso de escrita pra alterar keywords da foto
             catalog:withWriteAccessDo("AdicionandoKeywordNaFoto", function()
