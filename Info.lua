@@ -4,11 +4,18 @@ return {
   LrPluginName = "Flag Monitor Plugin",
   LrForceInitPlugin = true,
   LrInitPlugin = 'Init.lua',
+    -- Aqui indicamos ao Lightroom que este plugin fornece um Export Filter
+  LrExportFilterProvider = {
+    {
+        title = "Adicionar Keyword 'Comprado'",
+        file = "KeywordExportFilter.lua",  -- Nome do arquivo que contém o filtro
+    },
+  },
   LrLibraryMenuItems = {
     {
         title = "Monitorar Bandeiramento",
         file = "PhotoObserver.lua",
     }
 },
-  VERSION = { major = 1, minor = 0, revision = 35 }
+  VERSION = { major = 1, minor = 0, revision = 36 }
 }
